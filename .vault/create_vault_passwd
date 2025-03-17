@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2015, © Badassops LLC / Luc Suryo
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#	* Redistributions of source code must retain the above copyright
+#	notice, this list of conditions and the following disclaimer.
+#	* Redistributions in binary form must reproduce the above copyright
+#	notice, this list of conditions and the following disclaimer in the
+#	documentation and/or other materials provided with the distribution.
+#	* Neither the name of the <organization> nor the
+#	names of its contributors may be used to endorse or promote products
+#	derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSEcw
+# ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#*
+#* File		:	 create_vault_passwd
+#*
+#* Description	: Script to create a random password and save in the file passwd.vault
+#*
+#* Author	:	Luc Suryo <luc@badassops.com>
+#*
+#* Version	:	0.1
+#*
+#* Date		:	Aug 18, 2023
+#*
+#* History	:
+#*	Date:			Info:						Author:
+#*	May 7, 2015		First Release				LIS
+
+_program="${0##*/}"
+_author='Luc Suryo'
+_copyright="Copyright 2015 - $(date "+%Y") © Badassops LLC"
+_license='License 3-Clause BSD, https://opensource.org/licenses/BSD-3-Clause ♥'
+_version='0.1'
+_email='luc@badassops.com'
+_summary='Script to create a random password and save in the file passwd.vault.'
+_cancelled="OK : Process has been cancelled on your request."
+_info="$_program $_version\n$_copyright\n$_license\n\nWritten by $_author <$_email>\n$_summary\n"
+
+# working variables
+_opid=$$
+_work_dir=/var/tmp/"$_program"
+_lockfile="$_work_dir/$_program".LOCK
+_echo_flag='-e'
+_vault_dir="."
+_vault_pass_file="$_vault_dir"/passwd.vault
+_vault_pass_size=25
+
+# color :)
+# Reset
+_color_off='\033[0m'		# Text Reset
+
+# Bold
+_color_black='\033[1;30m'	# Black
+_color_red='\033[1;31m'		# Red
+_color_green='\033[1;32m'	# Green
+_color_yellow='\033[1;33m'	# Yellow
+_color_blue='\033[1;34m'	# Blue
+_color_purple='\033[1;35m'	# Purple
+_color_cyan='\033[1;36m'	# Cyan
+_color_white='\033[1;37m'	# White
+
+# Set interrupt handler
+trap inthandler 1 2 3 4 5 9 10 12 15 23 24 25
+
+function inthandler() {
+	clean_up
+	echo $_echo_flag "$_cancelled"
+	exit $_state_ok
+}
+
+function clean_up() {
+	rm -f "$_lockfile" > /dev/null 2>&1
+	return 0
+}
+
+function check_running() {
+	if [[ -f "$_lockfile" ]]; then
+		/bin/ps -p $(cat $_lockfile) > /dev/null 2>&1
+		if (( $? == 0 )) ; then
+			echo $_echo_flag "*** There is already a $_program running, execution has been terminated. ***"
+			echo $_echo_flag "*** If this is an error please remove the lock file: $_lockfile ***"
+			exit 1
+		else
+			echo $_echo_flag "*** Lock file found and deleted since there is no process with that pid ***"
+			rm -rf $_lockfile > /dev/null 2>&1
+		fi
+	fi
+	if ! mkdir -p "$_work_dir" > /dev/null 2>&1;then
+		echo $_echo_flag "*** $_state_unknown_msg: Unable to create file working directory $_work_dir! ***"
+		exit 1
+	fi
+	echo "$_opid" > "$_lockfile"
+	return 0
+}
+
+function _print_it() {
+	local _info_mode=$1
+	shift
+	case $_info_mode
+	in
+		# argument given none color
+		ok)			printf "${_color_green}%s${_color_off}\n" "$*" 2>&1 ;;
+		warning)	printf "${_color_yellow}%s${_color_off}\n" "$*" 2>&1 ;;
+		error)		printf "${_color_red}%s${_color_off}\n" "$*" 2>&1 ;;
+		Help)		printf "${_color_yellow}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		help)		printf "${_color_cyan}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		ignore)		printf "${_color_purple}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		# handles special character
+		sblack)		printf "${_color_black}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		sblue)		printf "${_color_blue}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		scyan)		printf "${_color_cyan}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		sgreen)		printf "${_color_green}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		spurple)	printf "${_color_purple}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		sred)		printf "${_color_red}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		syellow)	printf "${_color_yellow}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		swhite)		printf "${_color_white}" ; echo -e "$*" ; printf "${_color_off}" 2>&1 ;;
+		# no new line and no color
+		entry)		echo -en "$*" 2>&1 ;;
+		# default
+		*)			printf "${_color_cyan}%s${_color_off}\n" "$*" 2>&1 ;;
+	esac
+	return 0
+}
+
+function help() {
+	trap 1 2 3 4 5 9 10 12 15 23 24 25
+	_print_it Help "$_info"
+	_print_it help "Usage : $_program [-h|v] <size>"
+	_print_it help " Options:"
+	_print_it help " -h this help page."
+	_print_it help " -v Show version."
+	_print_it help " size, optional, size of chars to be use for the  $_vault_pass_size file"
+	_print_it help "Notes:"
+	_print_it help " example: $_program 25"
+	_print_it help "	will create the file passwd.vault with 25 randomized chars."
+	_print_it help "	default is $_vault_pass_size chars"
+	clean_up
+	exit $1
+}
+
+function get_given_options() {
+	while [[ -n "$1" ]]
+	do
+		case "$1" in
+			'-h'|'--help')		help 0 ;;
+			'-v'|'--version')	_print_it version "$_version" ; exit $_state_ok ; ;;
+			*)					_vault_pass_size=$1 ;;
+		esac
+		shift
+	done
+	return 0
+}
+
+function random() {
+	chars='@#$%^_+='
+	(
+< /dev/urandom LC_ALL=C tr -dc A-Za-z0-9 | head -c$1
+    ) | shuf | tr -d '\n'
+}
+
+function create_it() {
+	if [[ -f $_vault_pass_file ]] ; then
+		_print_it warning "the vault password file $_vault_pass_file already exist"
+		_print_it cyan "Press enter to continue, or Control-C to cancel..."
+		read inKey
+	fi
+	chmod 0600 $_vault_pass_file
+	rm -f $_vault_pass_file
+	random $_vault_pass_size > $_vault_pass_file
+	chmod 0400 $_vault_pass_file
+	return $?
+}
+
+function main() {
+	local _var_exit=0
+	get_given_options $@
+	check_running
+	if (( $? != 0 )) ; then
+		echo $_echo_flag "$_info\n\t Lock issue."
+		exit 255
+	fi
+	create_it $_suffix
+	_var_exit=$?
+	case $_var_exit
+	in
+		0)	_print_it info "The vault password file $_vault_pass_file created"
+			;;
+		*)	_print_it info "Issue creating the vault password file $_vault_pass_file" ;;
+	esac
+	clean_up
+	trap 1 2 3 4 5 9 10 12 15 23 24 25
+	exit $_var_exit
+}
+main "$@"
